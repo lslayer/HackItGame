@@ -4,10 +4,12 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import ua.com.goit.gojava1.lslayer.hackit2.actor.Actor;
-import ua.com.goit.gojava1.lslayer.hackit2.dto.ParameterObject;
+import ua.com.goit.gojava1.lslayer.hackit2.dto.ActionParameters;
 
 public abstract class AbstractAction implements Action {
     protected String commandToInvoke;
+    protected int timeNeededToInvokeAction;
+    private ActionParameters parameters = new ActionParameters();
 
     protected AbstractAction(String command) {
         this.commandToInvoke = command;
@@ -17,44 +19,31 @@ public abstract class AbstractAction implements Action {
         return this.commandToInvoke;
     }
 
-    protected String checkParameters(boolean actor, boolean tool,
-            boolean target, ParameterObject arg) {
-        if (actor && arg.actor == null) {
-            return "A person needed to " + commandToInvoke;
-        }
-        if (tool && arg.tool == null) {
-            return "A tool needed to " + commandToInvoke;
-        }
-        if (target && (arg.targetGear == null && arg.targetActor == null)) {
-            return "A target needed to " + commandToInvoke;
-        }
-        if (tool && arg.tool.getPurposeValue(this.getCommand()) == 0) {
-            return "Your " + arg.tool.getName() + " can't " + commandToInvoke;
-        }
-        return null;
-    }
-
-    protected boolean checkSuccess(ParameterObject arg) {
+    protected int getSuccessChance() {
         int bonus = 0;
-        if (arg.actor != null) {  
-            bonus += arg.actor.getSkill(commandToInvoke);
-        }
-        if (arg.tool != null) {
-            bonus += arg.tool.getPurposeValue(commandToInvoke); 
-        }
+        bonus += parameters.actor == null ? 0 : 
+            parameters.actor.getSkill(this.getCommand());
+        bonus += parameters.tool == null ? 0 : 
+            parameters.tool.getPurposeValue(this.getCommand());
+
         int antibonus = 0;
-        if (arg.targetGear != null ) {
-            antibonus += arg.targetGear.getPurposeValue(commandToInvoke);
-        }
-        if (arg.targetActor != null) {
-            antibonus += arg.targetActor.getSkill(commandToInvoke); 
-        }
-        return bonus >= antibonus;
+        antibonus += parameters.targetGear == null ? 0 : 
+            parameters.targetGear.getPurposeValue(this.getCommand());
+        antibonus += parameters.targetActor == null ? 0 : 
+            parameters.targetActor.getSkill(this.getCommand());
+
+        return bonus - antibonus;
     }
 
-    protected String getInfo(Actor target, int percent) {
-        if (target == null) return null; 
+    protected boolean checkSuccess() {
+        return (this.getSuccessChance() > 0);
+    }
+
+    protected String getInfo() {
+        // if (target == null) return null; All checks is made before here
         final int MAX_PERCENT = 100;
+        Actor target = this.parameters.targetActor;
+        int percent = this.parameters.value;
         String eol = System.getProperty("line.separator");
         String result = "";
         String unknown = "?????";
@@ -71,4 +60,20 @@ public abstract class AbstractAction implements Action {
         }
         return result;
     }
+
+    public ActionParameters getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(ActionParameters po) {
+        this.parameters = po;
+    }
+
+    @Override
+    public String toString() {
+        return "AbstractAction [commandToInvoke=" + commandToInvoke
+                + ", timeNeededToInvokeAction=" + timeNeededToInvokeAction
+                + ", parameters=" + parameters + "]";
+    }
+
 }
